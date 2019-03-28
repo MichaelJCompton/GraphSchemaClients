@@ -1,0 +1,20 @@
+#####################################################
+# Fragment of the GraphSchema.io GraphQL schema 
+# that's currently supported by the client
+#####################################################
+
+
+type Query {
+    getEnvironment(id: ID!): Environment!
+    queryEnvironment(nameSearchTerms: [String!]): [Environment!]!
+
+    getDgraphInstance(id: ID!): DgraphInstance!
+    queryDgraphInstance(environmentId: ID): [DgraphInstance!]!
+}
+
+
+type Mutation {
+    addDgraphInstance(inputData: DgraphInstanceInput!): DgraphInstance!
+
+    deleteDgraphInstance(inputData: ID!): String
+}
