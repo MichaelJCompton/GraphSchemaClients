@@ -3,6 +3,7 @@
   edge {
     anInt
     aFloat
+    aDouble
     theTime
   }
 }

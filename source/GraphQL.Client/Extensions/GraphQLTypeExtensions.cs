@@ -50,6 +50,8 @@ namespace GraphQL.Client.Extensions {
                     return "Int";
                 case "Single":
                     return "Float";
+                case "Double":
+                    return "Float";
                 default:
                     return csTypeName;
             }

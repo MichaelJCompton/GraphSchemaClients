@@ -68,12 +68,14 @@ namespace GraphQL.Client.tests.Extensions {
             typeof(string).IsGraphQLType().Should().BeTrue();
             typeof(int).IsGraphQLType().Should().BeTrue();
             typeof(float).IsGraphQLType().Should().BeTrue();
+            typeof(double).IsGraphQLType().Should().BeTrue();
             typeof(bool).IsGraphQLType().Should().BeTrue();
             typeof(DateTime).IsGraphQLType().Should().BeTrue();
 
             typeof(List<string>).IsGraphQLType().Should().BeTrue();
             typeof(List<int>).IsGraphQLType().Should().BeTrue();
             typeof(List<float>).IsGraphQLType().Should().BeTrue();
+            typeof(List<double>).IsGraphQLType().Should().BeTrue();
             typeof(List<bool>).IsGraphQLType().Should().BeTrue();
             typeof(List<DateTime>).IsGraphQLType().Should().BeTrue();
         }
@@ -101,6 +103,7 @@ namespace GraphQL.Client.tests.Extensions {
             (new GraphQLTypeReference(typeof(string).Name)).IsCompatibleType(typeof(string)).Should().BeTrue();
             (new GraphQLTypeReference("Int")).IsCompatibleType(typeof(int)).Should().BeTrue(); // because the type name is different
             (new GraphQLTypeReference("Float")).IsCompatibleType(typeof(float)).Should().BeTrue(); // because the C# type name is different
+            (new GraphQLTypeReference("Float")).IsCompatibleType(typeof(double)).Should().BeTrue(); // because the C# type name is different
             (new GraphQLTypeReference(typeof(ATestGraphQLClass).Name)).IsCompatibleType(typeof(ATestGraphQLClass)).Should().BeTrue();
 
             (new NonNullGraphType(new GraphQLTypeReference(typeof(string).Name))).IsCompatibleType(typeof(string)).Should().BeTrue();
@@ -202,6 +205,7 @@ namespace GraphQL.Client.tests.Extensions {
         private class ATestGraphQLClass {
             public int AnInt { get; set; }
             public float AFloat { get; set; }
+            public double ADouble { get; set; }
             public DateTime TheTime { get; set; }
         }
 

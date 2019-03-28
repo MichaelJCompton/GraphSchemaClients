@@ -1,5 +1,6 @@
 {
   anInt
   aFloat
+  aDouble
   theTime
 }
