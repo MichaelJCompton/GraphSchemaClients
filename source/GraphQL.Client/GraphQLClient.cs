@@ -43,14 +43,17 @@ namespace GraphQL.Client {
         }
 
         public async Task<Result<TResult>> ExecuteRequest<TResult>(string name, string operationName = null) {
-            return await ExecuteRequest<TResult, Object, Object>(name, null, null, operationName);
+            return await ExecuteRequest<TResult, Object, Object, Object>(name, null, null, null, operationName);
         }
 
         public async Task<Result<TResult>> ExecuteRequest<TResult, TArg1>(string name, TArg1 arg1, string operationName = null) {
-            return await ExecuteRequest<TResult, TArg1, Object>(name, arg1, null, operationName);
+            return await ExecuteRequest<TResult, TArg1, Object, Object>(name, arg1, null, null, operationName);
         }
 
         public async Task<Result<TResult>> ExecuteRequest<TResult, TArg1, TArg2>(string name, TArg1 arg1, TArg2 arg2, string operationName = null) {
+            return await ExecuteRequest<TResult, TArg1, TArg2, Object>(name, arg1, arg2, null, operationName);
+        }
+        public async Task<Result<TResult>> ExecuteRequest<TResult, TArg1, TArg2, TArg3>(string name, TArg1 arg1, TArg2 arg2, TArg3 arg3, string operationName = null) {
             string operationType;
             FieldType fieldType;
 
@@ -68,7 +71,7 @@ namespace GraphQL.Client {
                 return Results.Fail<TResult>(new FluentResults.ExceptionalError(new KeyNotFoundException($"No query or mutation \"{name}\" was found.")));
             }
 
-            var request = RequestBuilder.BuildRequest<TResult, TArg1, TArg2>(name, operationName, operationType, fieldType, arg1, arg2);
+            var request = RequestBuilder.BuildRequest<TResult, TArg1, TArg2, TArg3>(name, operationName, operationType, fieldType, arg1, arg2, arg3);
 
             if(request.IsFailed) {
                 return request.ToResult<TResult>();

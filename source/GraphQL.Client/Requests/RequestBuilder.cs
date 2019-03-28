@@ -34,17 +34,18 @@ namespace GraphQL.Client.Requests
 
         // Pre: name and operationName are both non-null and not empty
         // Pre: fieldType is non null
-        public static Result<GraphQLRequest> BuildRequest<TResult, TArg1, TArg2>(
+        public static Result<GraphQLRequest> BuildRequest<TResult, TArg1, TArg2, TArg3>(
             string name, 
             string operationName, 
             string operationType, 
             FieldType fieldType, 
             TArg1 arg1, 
-            TArg2 arg2
+            TArg2 arg2,
+            TArg3 arg3
         ) {
 
-            var typeList = new List<Type> { typeof(TArg1), typeof(TArg2) };
-            var argList = new List<object> { arg1, arg2 };
+            var typeList = new List<Type> { typeof(TArg1), typeof(TArg2), typeof(TArg3) };
+            var argList = new List<object> { arg1, arg2, arg3 };
 
             if (!fieldType.ResolvedType.IsCompatibleType(typeof(TResult))) {
                 var refType = fieldType.ResolvedType.GetNamedType() as GraphQLTypeReference;
