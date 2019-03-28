@@ -1,0 +1,6 @@
+steps:
+- name: microsoft/dotnet:2.2-sdk
+  args: ['dotnet', 'build']
+- name: microsoft/dotnet:2.2-sdk
+  args: ['dotnet', 'test', '--no-build']
+
