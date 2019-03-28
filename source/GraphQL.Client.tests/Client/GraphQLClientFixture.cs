@@ -2,6 +2,6 @@ namespace GraphQL.Client.tests.Client
 {
     public class GraphQLClientFixture
     {
-        // refactor this a bit for testing while I go.
+        // How to test out the client http calls?
     }
 }

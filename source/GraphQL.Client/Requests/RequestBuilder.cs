@@ -9,10 +9,8 @@ using GraphQL.Types;
 using GraphQL.Utilities;
 using Newtonsoft.Json.Linq;
 
-namespace GraphQL.Client.Requests
-{
-    public class RequestBuilder
-    {
+namespace GraphQL.Client.Requests {
+    public class RequestBuilder {
         public static GraphQLRequest AstToRequest(
             string operationType,
             string operationName,
@@ -27,19 +25,19 @@ namespace GraphQL.Client.Requests
 
             return new GraphQLRequest {
                 Query = $"{operationType} {operationName}{formattedVariableDefinitions} {{\n {AstPrinter.Print(selection)} \n}}",
-                OperationName = operationName,
-                Variables = variables
+                    OperationName = operationName,
+                    Variables = variables
             };
         }
 
         // Pre: name and operationName are both non-null and not empty
         // Pre: fieldType is non null
         public static Result<GraphQLRequest> BuildRequest<TResult, TArg1, TArg2, TArg3>(
-            string name, 
-            string operationName, 
-            string operationType, 
-            FieldType fieldType, 
-            TArg1 arg1, 
+            string name,
+            string operationName,
+            string operationType,
+            FieldType fieldType,
+            TArg1 arg1,
             TArg2 arg2,
             TArg3 arg3
         ) {
@@ -53,7 +51,7 @@ namespace GraphQL.Client.Requests
                 return Results.Fail<GraphQLRequest>($"Result type {typeof(TResult).Name} doesn't match GraphQL result type {typename}");
             }
 
-            if(!typeof(TResult).IsGraphQLType()) {
+            if (!typeof(TResult).IsGraphQLType()) {
                 return Results.Fail<GraphQLRequest>($"Result type {typeof(TResult).Name} doesn't have GraphQLModel attribute");
             }
 
@@ -67,8 +65,13 @@ namespace GraphQL.Client.Requests
                 var argType = typeList[i];
                 var arg = argList[i];
 
-                if (fieldArg.ResolvedType.IsNonNullGraphType() && arg == null) {
-                    return Results.Fail<GraphQLRequest>(new FluentResults.ExceptionalError(new ArgumentNullException(nameof(name), $"Argument is null, but GraphQL is requiring {fieldArg.Name} to be non-null.")));
+                if (arg == null) {
+                    if (fieldArg.ResolvedType.IsNonNullGraphType() && arg == null) {
+                        return Results.Fail<GraphQLRequest>(
+                            new FluentResults.ExceptionalError(
+                                new ArgumentNullException(nameof(name), $"Argument is null, but GraphQL is requiring {fieldArg.Name} to be non-null.")));
+                    }
+                    continue;
                 }
 
                 if (!fieldArg.ResolvedType.IsCompatibleType(argType)) {
@@ -77,7 +80,7 @@ namespace GraphQL.Client.Requests
                     return Results.Fail<GraphQLRequest>($"Argument type {argType.Name} doesn't match GraphQL type {typename}");
                 }
 
-                if(!argType.IsGraphQLType()) {
+                if (!argType.IsGraphQLType()) {
                     return Results.Fail<GraphQLRequest>($"Argument type {argType.Name} doesn't have GraphQLModel attribute");
                 }
 

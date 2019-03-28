@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -12,7 +11,6 @@ using GraphQL.Client.Models;
 using GraphQL.Client.Requests;
 using GraphQL.Language.AST;
 using GraphQL.Types;
-using GraphQL.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -126,11 +124,11 @@ namespace GraphQL.Client {
             // https://github.com/App-vNext/Polly to retry on transient errors??
         }
 
-        private HttpContent CreateHttpContent(GraphQLRequest query) {
+        private HttpContent CreateHttpContent(GraphQLRequest request) {
             HttpContent httpContent;
 
             var ms = new MemoryStream();
-            SerializeJsonIntoStream(query, ms);
+            SerializeJsonIntoStream(request, ms);
             ms.Seek(0, SeekOrigin.Begin);
             httpContent = new StreamContent(ms, 1024);
             httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");

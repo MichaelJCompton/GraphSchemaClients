@@ -1,0 +1,13 @@
+{
+  "Query": "query aTestQuery($arg1: ID!, $arg2: TestType!) {\n aTestQuery(arg1: $arg1, arg2: $arg2) {\n  anInt\n  edge {\n    anInt\n    aFloat\n    aDouble\n    theTime\n  }\n} \n}",
+  "OperationName": "aTestQuery",
+  "Variables": {
+    "arg1": "ID-123",
+    "arg2": {
+      "AnInt": 42,
+      "AFloat": 4.2,
+      "ADouble": 4.2,
+      "TheTime": "0001-01-01T00:00:00"
+    }
+  }
+}
