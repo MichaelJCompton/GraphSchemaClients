@@ -1,0 +1,8 @@
+{
+  anInt
+  edge {
+    anInt
+    aFloat
+    theTime
+  }
+}

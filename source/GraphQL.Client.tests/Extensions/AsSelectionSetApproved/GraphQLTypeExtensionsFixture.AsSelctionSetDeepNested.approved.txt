@@ -1,0 +1,30 @@
+{
+  anInt
+  edge {
+    anInt
+    aFloat
+    theTime
+  }
+  nestedEdge {
+    anInt
+    edge {
+      anInt
+      aFloat
+      theTime
+    }
+  }
+  deepEdge {
+    anInt
+    edge {
+      anInt
+      aFloat
+      theTime
+    }
+    nestedEdge {
+      anInt
+    }
+    deepEdge {
+      anInt
+    }
+  }
+}
