@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.6</TargetFramework>
+    <RootNamespace>GraphQL.Client</RootNamespace>
+    <PackageId>GraphSchema.GraphQL.Client</PackageId>
+    <LangVersion>latest</LangVersion>
+
+    <Title>.Net GraphQL Client</Title>
+    <Authors>Michael Compton</Authors>
+    <Company>Michael Compton Pty Ltd</Company>
+    <Product>.Net GraphQL Client</Product>
+    <Description>.Net client library for GraphQL with typed calls</Description>
+    <Copyright>Michael Compton</Copyright>
+    <PackageProjectUrl>https://github.com/MichaelJCompton/GraphSchemaClients</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MichaelJCompton/GraphSchemaClients</RepositoryUrl>
+    <IncludeSymbols>True</IncludeSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+    <PackageReference Include="System.ComponentModel.Annotations" Version="4.5.0" />
+    <PackageReference Include="GraphQL" Version="2.4.0" />
+    <PackageReference Include="FluentResults" Version="1.0.0" />
+  </ItemGroup>
+</Project>
