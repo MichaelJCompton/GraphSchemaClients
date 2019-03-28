@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FluentResults;
 using GraphQL.Client.Extensions;
 using GraphQL.Client.Models;
+using GraphQL.Client.Requests;
 using GraphQL.Language.AST;
 using GraphQL.Types;
 using GraphQL.Utilities;
@@ -28,14 +29,15 @@ namespace GraphQL.Client {
         }
 
         // FIXME: add for testing : iscompatiblewith(schema-string)
+        // tests all the types and queries and mutations against the schema
 
         public void WithSchema(string schemaString) {
             var graphQLSchema = GraphQL.Types.Schema.For(schemaString);
 
-            foreach(var field in graphQLSchema.Query.Fields) {
+            foreach (var field in graphQLSchema.Query.Fields) {
                 Queries[field.Name] = field;
             }
-            foreach(var field in graphQLSchema.Mutation.Fields) {
+            foreach (var field in graphQLSchema.Mutation.Fields) {
                 Mutations[field.Name] = field;
             }
         }
@@ -52,9 +54,6 @@ namespace GraphQL.Client {
             string operationType;
             FieldType fieldType;
 
-            var typeList = new List<Type> { typeof(TArg1), typeof(TArg2) };
-            var argList = new List<object> { arg1, arg2 };
-
             if (string.IsNullOrWhiteSpace(name)) {
                 return Results.Fail<TResult>(new FluentResults.ExceptionalError(new ArgumentNullException(nameof(name))));
             }
@@ -69,100 +68,35 @@ namespace GraphQL.Client {
                 return Results.Fail<TResult>(new FluentResults.ExceptionalError(new KeyNotFoundException($"No query or mutation \"{name}\" was found.")));
             }
 
-            if (!fieldType.ResolvedType.IsCompatibleType(typeof(TResult))) {
-                var refType = fieldType.ResolvedType.GetNamedType() as GraphQLTypeReference;
-                var typename = refType?.TypeName ?? "unknown type";
-                return Results.Fail<TResult>($"Result type {typeof(TResult).Name} doesn't match GraphQL result type {typename}");
+            var request = RequestBuilder.BuildRequest<TResult, TArg1, TArg2>(name, operationName, operationType, fieldType, arg1, arg2);
+
+            if(request.IsFailed) {
+                return request.ToResult<TResult>();
             }
 
-            if(!typeof(TResult).IsGraphQLType()) {
-                return Results.Fail<TResult>($"Result type {typeof(TResult).Name} doesn't have GraphQLModel attribute");
-            }
-
-            VariableDefinitions variableDefinitions = new VariableDefinitions();
-            JObject variables = new JObject();
-            Arguments arguments = new Arguments();
-
-            var fieldArgs = fieldType.Arguments.ToList();
-            for (int i = 0; i < fieldArgs.Count; i++) {
-                var fieldArg = fieldArgs[i];
-                var argType = typeList[i];
-                var arg = argList[i];
-
-                if (fieldArg.ResolvedType.IsNonNullGraphType() && arg == null) {
-                    return Results.Fail<TResult>(new FluentResults.ExceptionalError(new ArgumentNullException(nameof(name), $"Argument is null, but GraphQL is requiring {fieldArg.Name} to be non-null.")));
-                }
-
-                if (!fieldArg.ResolvedType.IsCompatibleType(argType)) {
-                    var refType = fieldArg.ResolvedType.GetNamedType() as GraphQLTypeReference;
-                    var typename = refType?.TypeName ?? "unknown type";
-                    return Results.Fail<TResult>($"Argument type {argType.Name} doesn't match GraphQL type {typename}");
-                }
-
-                if(!argType.IsGraphQLType()) {
-                    return Results.Fail<TResult>($"Argument type {argType.Name} doesn't have GraphQLModel attribute");
-                }
-
-                arguments.Add(new Argument(new NameNode(fieldArg.Name)) {
-                    Value = new VariableReference(new NameNode(fieldArg.Name))
-                });
-
-                variableDefinitions.Add(new VariableDefinition(new NameNode(fieldArg.Name)) {
-                    Type = fieldArg.ResolvedType.ToIType()
-                });
-
-                variables[fieldArg.Name] = JToken.FromObject(arg);
-            }
-
-            // FIXME: pick up the depth from the model type
-            SelectionSet selections = typeof(TResult).GetCSNamedType().AsSelctionSet(3);
-
-            var requestField = new Field(null, new NameNode(name)) {
-                Arguments = arguments,
-                Directives = new Directives(),
-                SelectionSet = selections
-            };
-
-            var result = await ExecuteRequest(
-                operationType,
-                operationName,
-                variableDefinitions,
-                requestField,
-                variables);
+            var result = await ExecuteRequest(request.Value);
 
             if (result.Errors.Count == 0) {
                 TResult asTResult = result.Data[name].ToObject<TResult>();
-                if(fieldType.ResolvedType.IsNonNullGraphType() && asTResult == null) {
+                if (fieldType.ResolvedType.IsNonNullGraphType() && asTResult == null) {
                     return Results.Fail<TResult>($"Returned null, but GraphQL required {fieldType.ResolvedType.GetNamedType().Name} to be non-null.");
                 }
                 return Results.Ok(asTResult);
             }
-            
+
             return Results.Fail<TResult>(result.Errors.ToString());
         }
 
         public async Task<GraphQLResult> ExecuteRequest(
-            string operationType,
-            string operationName,
-            VariableDefinitions variableDefinitions,
-            ISelection selection,
-            JObject variables
-        ) {
-
-            var formattedVariableDefinitions = variableDefinitions.Any()
-                ? "(" + string.Join(", ", variableDefinitions.Select(AstPrinter.Print)) + ")"
-                : "";
-
-            GraphQLRequest request = new GraphQLRequest {
-                Query = $"{operationType} {operationName}{formattedVariableDefinitions} {{\n {AstPrinter.Print(selection)} \n}}",
-                OperationName = operationName,
-                Variables = variables
-            };
-
-            return await ExecuteRequest(request);
-        }
+                string operationType,
+                string operationName,
+                VariableDefinitions variableDefinitions,
+                ISelection selection,
+                JObject variables) =>
+            await ExecuteRequest(RequestBuilder.AstToRequest(operationType, operationName, variableDefinitions, selection, variables));
 
         // Built around ideas from https://johnthiriet.com/efficient-post-calls/
+        // not yet tested properly
         public async Task<GraphQLResult> ExecuteRequest(GraphQLRequest request) {
 
             using(var httpContent = CreateHttpContent(request)) {
