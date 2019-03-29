@@ -79,11 +79,7 @@ namespace GraphQL.Client {
             var result = await ExecuteRequest(request.Value);
 
             if (result.Errors.Count == 0) {
-                TResult asTResult = result.Data[name].ToObject<TResult>();
-                if (fieldType.ResolvedType.IsNonNullGraphType() && asTResult == null) {
-                    return Results.Fail<TResult>($"Returned null, but GraphQL required {fieldType.ResolvedType.GetNamedType().Name} to be non-null.");
-                }
-                return Results.Ok(asTResult);
+                return BuildTResult<TResult>(result, request.Value, name, fieldType.ResolvedType.IsNonNullGraphType());
             }
 
             return Results.Fail<TResult>(result.Errors.ToString());
@@ -121,25 +117,72 @@ namespace GraphQL.Client {
             } catch (JsonSerializationException ex) {
                 var result = new GraphQLResult();
                 result.Errors = new JArray();
-                result.Errors.Add(JObject.FromObject(
-                    new {
-                        message = "Json Serialization Exception while reading GraphQL response",
-                            exception = JObject.FromObject(ex),
-                            content = responseContent
-                    }));
+
+                var error = new GraphQLError {
+                    Message = "Json Serialization Exception while reading GraphQL response",
+                    Extensions = new GraphQLErrorExtension {
+                        Exception = ex,
+                        Response = responseContent,
+                        Request = request
+                    }
+                };
+
+                result.Errors.Add(JObject.FromObject(error));
                 return result;
+
             } catch (Exception ex) {
                 var result = new GraphQLResult();
                 result.Errors = new JArray();
-                result.Errors.Add(JObject.FromObject(
-                    new {
-                        message = "Unknown exception while processing request",
-                            exception = JObject.FromObject(ex),
-                            content = responseContent
-                    }));
+
+                var error = new GraphQLError {
+                    Message = "Unknown exception while processing request",
+                    Extensions = new GraphQLErrorExtension {
+                        Exception = ex,
+                        Response = responseContent,
+                        Request = request
+                    }
+                };
+
+                result.Errors.Add(error);
                 return result;
             }
 
+        }
+
+        private Result<TResult> BuildTResult<TResult>(GraphQLResult result, GraphQLRequest request, string requestName, bool nonNull) {
+            try {
+                var data = result.Data[requestName];
+                TResult asTResult;
+                if (data == null) {
+                    asTResult = default(TResult);
+                } else {
+                    asTResult = data.ToObject<TResult>();
+                }
+
+                if (nonNull && (data == null || asTResult == null)) {
+                    var error = new GraphQLError {
+                        Message = $"Returned null, but GraphQL required non-null.",
+                        Extensions = new GraphQLErrorExtension {
+                            Response = JsonConvert.SerializeObject(result, Formatting.Indented),
+                            Request = request
+                        }
+                    };
+
+                    return Results.Fail<TResult>(new GraphQLErrorReason(error));
+                }
+                return Results.Ok(asTResult);
+            } catch (JsonSerializationException ex) {
+
+                var error = new GraphQLError {
+                    Message = "Json Serialization Exception while reading GraphQL response",
+                    Extensions = new GraphQLErrorExtension {
+                        Exception = ex,
+                        Response = JsonConvert.SerializeObject(result, Formatting.Indented),
+                        Request = request
+                    }
+                };
+                return Results.Fail<TResult>(new GraphQLErrorReason(error));
+            }
         }
 
         private HttpContent CreateHttpContent(GraphQLRequest request) {
