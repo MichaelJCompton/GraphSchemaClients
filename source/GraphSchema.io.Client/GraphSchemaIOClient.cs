@@ -31,7 +31,11 @@ namespace GraphSchema.io.Client {
         }
 
         public async Task<Result<DgraphInstance>> AddDgraphInstance(DgraphInstanceInput instance) {
-            var addResult = await ExecuteRequest<DgraphInstance, DgraphInstanceInput>("addDgraphInstance", instance);
+            return await ExecuteRequest<DgraphInstance, DgraphInstanceInput>("addDgraphInstance", instance);
+        }
+
+        public async Task<Result<DgraphInstance>> AddDgraphInstanceAndWait(DgraphInstanceInput instance) {
+            var addResult = await AddDgraphInstance(instance);
 
             if (addResult.IsFailed) {
                 return addResult;
