@@ -38,6 +38,7 @@ namespace GraphQL.Client {
             foreach (var field in graphQLSchema.Mutation.Fields) {
                 Mutations[field.Name] = field;
             }
+
         }
 
         public async Task<Result<TResult>> ExecuteRequest<TResult>(string name, string operationName = null) {
@@ -71,7 +72,7 @@ namespace GraphQL.Client {
 
             var request = RequestBuilder.BuildRequest<TResult, TArg1, TArg2, TArg3>(name, operationName, operationType, fieldType, arg1, arg2, arg3);
 
-            if(request.IsFailed) {
+            if (request.IsFailed) {
                 return request.ToResult<TResult>();
             }
 
@@ -97,31 +98,48 @@ namespace GraphQL.Client {
             await ExecuteRequest(RequestBuilder.AstToRequest(operationType, operationName, variableDefinitions, selection, variables));
 
         // Built around ideas from https://johnthiriet.com/efficient-post-calls/
-        // not yet tested properly
+        // WIP & not yet tested properly
         public async Task<GraphQLResult> ExecuteRequest(GraphQLRequest request) {
-
-            using(var httpContent = CreateHttpContent(request)) {
-
-                // Base address should be set on the client from configuration.
-                using(var response = await Client.PostAsync("", httpContent)) // FIXME: need cancelation tokens????
-                {
-                    response.EnsureSuccessStatusCode();
-
-                    var responseContent = await response.Content.ReadAsStringAsync();
-
-                    return JsonConvert.DeserializeObject<GraphQLResult>(responseContent);
-                }
-            }
-
-            // FIXME: what to do with errors in here??? maybe should add them to
-            // the errors payload of the result and return that ... that'll mean
-            // a client has to deal with errors from this and from the backend
-            // this is calling 
-            //
-            // try { } catch() { } and return error if we get to the end.
+            // FIXME: need cancelation tokens????
             //
             // probably can also use something like polly
             // https://github.com/App-vNext/Polly to retry on transient errors??
+
+            string responseContent = null;
+            try {
+                using(var httpContent = CreateHttpContent(request)) {
+
+                    // Base address should be set on the http client.
+                    using(var response = await Client.PostAsync("", httpContent)) {
+                        response.EnsureSuccessStatusCode();
+
+                        responseContent = await response.Content.ReadAsStringAsync();
+
+                        return JsonConvert.DeserializeObject<GraphQLResult>(responseContent);
+                    }
+                }
+            } catch (JsonSerializationException ex) {
+                var result = new GraphQLResult();
+                result.Errors = new JArray();
+                result.Errors.Add(JObject.FromObject(
+                    new {
+                        message = "Json Serialization Exception while reading GraphQL response",
+                            exception = JObject.FromObject(ex),
+                            content = responseContent
+                    }));
+                return result;
+            } catch (Exception ex) {
+                var result = new GraphQLResult();
+                result.Errors = new JArray();
+                result.Errors.Add(JObject.FromObject(
+                    new {
+                        message = "Unknown exception while processing request",
+                            exception = JObject.FromObject(ex),
+                            content = responseContent
+                    }));
+                return result;
+            }
+
         }
 
         private HttpContent CreateHttpContent(GraphQLRequest request) {

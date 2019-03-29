@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 
 namespace GraphQL.Client.Requests {
     public class RequestBuilder {
+
         public static GraphQLRequest AstToRequest(
             string operationType,
             string operationName,
