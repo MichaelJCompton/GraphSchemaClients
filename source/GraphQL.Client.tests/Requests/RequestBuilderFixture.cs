@@ -5,6 +5,7 @@ using FluentAssertions;
 using GraphQL.Client.Attributes;
 using GraphQL.Client.Models;
 using GraphQL.Client.Requests;
+using GraphQL.Client.tests.TestTypes;
 using GraphQL.Types;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -104,25 +105,6 @@ type Query {
             var result = RequestBuilder.BuildRequest<TestResult, NotGraphQLModel, Object, Object>(TestName, TestName, "query", TestField, null, null, null);
 
             result.IsFailed.Should().BeTrue(because: $"arg1 of type {nameof(NotGraphQLModel)} is not a GraphQL type");
-        }
-
-        [GraphQLModel]
-        private class TestType {
-            public int AnInt { get; set; }
-            public float AFloat { get; set; }
-            public double ADouble { get; set; }
-            public DateTime TheTime { get; set; }
-        }
-
-        [GraphQLModel]
-        private class TestResult {
-            public int AnInt { get; set; }
-            public TestType Edge { get; set; }
-        }
-
-
-        private class NotGraphQLModel {
-            public int AnInt { get; set; }
         }
 
     }
