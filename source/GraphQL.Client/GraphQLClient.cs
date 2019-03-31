@@ -22,8 +22,6 @@ namespace GraphQL.Client {
         private readonly Dictionary<string, FieldType> Queries = new Dictionary<string, FieldType>();
         private readonly Dictionary<string, FieldType> Mutations = new Dictionary<string, FieldType>();
 
-        private readonly JsonSerializer SerializerWithErrors = new JsonSerializer{ MissingMemberHandling = MissingMemberHandling.Error };
-
         public GraphQLClient(HttpClient client) {
             Client = client;
         }
@@ -34,12 +32,12 @@ namespace GraphQL.Client {
         public void WithSchema(string schemaString) {
             var graphQLSchema = GraphQL.Types.Schema.For(schemaString);
 
-            if(graphQLSchema.Query != null) {
+            if (graphQLSchema.Query != null) {
                 foreach (var field in graphQLSchema.Query.Fields) {
                     Queries[field.Name] = field;
                 }
             }
-            if(graphQLSchema.Mutation != null) {
+            if (graphQLSchema.Mutation != null) {
                 foreach (var field in graphQLSchema.Mutation.Fields) {
                     Mutations[field.Name] = field;
                 }
@@ -104,52 +102,70 @@ namespace GraphQL.Client {
             // probably can also use something like polly
             // https://github.com/App-vNext/Polly to retry on transient errors??
 
-            string responseContent = null;
             try {
                 using(var httpContent = CreateHttpContent(request)) {
-
                     // Base address should be set on the http client.
                     using(var response = await Client.PostAsync("", httpContent)) {
-                        response.EnsureSuccessStatusCode();
-
-                        responseContent = await response.Content.ReadAsStringAsync();
-
-                        return JsonConvert.DeserializeObject<GraphQLResult>(responseContent);
+                        using(Stream responseStream = await response.Content.ReadAsStreamAsync()) {
+                            if (response.IsSuccessStatusCode) {
+                                try {
+                                    return DeserializeJsonFromStream<GraphQLResult>(responseStream);
+                                } catch (JsonSerializationException ex) {
+                                    // try rereading the stream ... is this always safe?
+                                    return BuildGraphQLErrorResult(
+                                        "Json Serialization Exception while reading GraphQL response",
+                                        ex, request, await response.Content.ReadAsStringAsync());
+                                }
+                            } else {
+                                return BuildGraphQLErrorResult(
+                                    $"HTTP response is not success (code {response.StatusCode})",
+                                    null, request, await response.Content.ReadAsStringAsync());
+                            }
+                        }
                     }
                 }
-            } catch (JsonSerializationException ex) {
-                var result = new GraphQLResult();
-                result.Errors = new JArray();
-
-                var error = new GraphQLError {
-                    Message = "Json Serialization Exception while reading GraphQL response",
-                    Extensions = new GraphQLErrorExtension {
-                        Exception = ex,
-                        Response = responseContent,
-                        Request = request
-                    }
-                };
-
-                result.Errors.Add(JObject.FromObject(error));
-                return result;
-
-            } catch (Exception ex) { // WebException ???
-                var result = new GraphQLResult();
-                result.Errors = new JArray();
-
-                var error = new GraphQLError {
-                    Message = "Exception while processing request",
-                    Extensions = new GraphQLErrorExtension {
-                        Exception = ex,
-                        Response = responseContent,
-                        Request = request
-                    }
-                };
-
-                result.Errors.Add(JObject.FromObject(error));
-                return result;
+            } catch (Exception ex) { // Just catch WebException ??
+                return BuildGraphQLErrorResult(
+                    "Exception while processing request",
+                    ex, request, null);
             }
+        }
 
+        // see 
+        // https://www.newtonsoft.com/json/help/html/Performance.htm
+        // and
+        // https://johnthiriet.com/efficient-api-calls/
+        private T DeserializeJsonFromStream<T>(Stream stream) {
+            if (stream == null || stream.CanRead == false)
+                return default(T);
+
+            using(StreamReader responseStreamReader = new StreamReader(stream)) {
+                using(JsonReader jsonReader = new JsonTextReader(responseStreamReader)) {
+                    JsonSerializer serializer = new JsonSerializer();
+
+                    return serializer.Deserialize<T>(jsonReader);
+                }
+            }
+        }
+
+        private GraphQLResult BuildGraphQLErrorResult(string message, Exception exception, GraphQLRequest graphQLRequest, string responseString) {
+            var result = new GraphQLResult();
+            result.Errors = new JArray();
+            result.Errors.Add(JObject.FromObject(BuildGraphQLError(message, exception, graphQLRequest, responseString)));
+            return result;
+        }
+
+        private GraphQLError BuildGraphQLError(string message, Exception exception, GraphQLRequest graphQLRequest, string responseString) {
+            /* fixformat ignore:start */
+            return new GraphQLError {
+                Message = message,
+                Extensions = new GraphQLErrorExtension {
+                    Exception = exception,
+                    Response = responseString,
+                    Request = graphQLRequest
+                }
+            };
+            /* fixformat ignore:end */
         }
 
         private Result<TResult> BuildTResult<TResult>(GraphQLResult result, GraphQLRequest request, string requestName, bool nonNull) {
@@ -162,40 +178,28 @@ namespace GraphQL.Client {
                     // Not sure yet if this is 100% right.  Maybe the serializer
                     // should be an option, cause there might be cases where you
                     // want to ingore the extra properties.
-                    asTResult = data.ToObject<TResult>(SerializerWithErrors);
+                    asTResult = data.ToObject<TResult>(new JsonSerializer { MissingMemberHandling = MissingMemberHandling.Error });
                 }
 
                 if (nonNull && (data == null || asTResult == null)) {
                     // Not sure if this would occur.  A GraphQL
                     // server should have already errored and be returning that
                     // error, right?
-                    var error = new GraphQLError {
-                        Message = "Returned null, but GraphQL required non-null.",
-                        Extensions = new GraphQLErrorExtension {
-                            Response = JsonConvert.SerializeObject(result, Formatting.Indented),
-                            Request = request
-                        }
-                    };
 
-                    return Results.Fail<TResult>(new GraphQLErrorReason(error));
+                    return Results.Fail<TResult>(
+                        new GraphQLErrorReason(
+                            BuildGraphQLError("Returned null, but GraphQL required non-null.",
+                                null, request, JsonConvert.SerializeObject(result, Formatting.Indented))));
                 }
                 return Results.Ok(asTResult);
             } catch (JsonSerializationException ex) {
-
-                var error = new GraphQLError {
-                    Message = "Json Serialization Exception while reading GraphQL response",
-                    Extensions = new GraphQLErrorExtension {
-                        Exception = ex,
-                        Response = JsonConvert.SerializeObject(result, Formatting.Indented),
-                        Request = request
-                    }
-                };
-                return Results.Fail<TResult>(new GraphQLErrorReason(error));
+                return Results.Fail<TResult>(new GraphQLErrorReason(
+                    BuildGraphQLError("Json Serialization Exception while reading GraphQL response",
+                        ex, request, JsonConvert.SerializeObject(result, Formatting.Indented))));
             }
         }
 
         // Built around ideas from https://johnthiriet.com/efficient-post-calls/
-        // WIP 
         private HttpContent CreateHttpContent(GraphQLRequest request) {
             HttpContent httpContent;
 

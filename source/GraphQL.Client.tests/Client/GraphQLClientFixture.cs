@@ -81,6 +81,27 @@ type Query {
             error.Extensions.Response.Should().Be(stringContent);
         }
 
+        [Test]
+        public async Task HTTPNotOKIsErrorResult() {
+            var stringContent = "An Error";
+            // Not sure how often this should occur.  Most GraphQL servers
+            // should return an OK with an error payload, but there'll also be
+            // http error cases.
+            var response = new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized);
+            response.Content = new StringContent(stringContent);
+            var clientUnderTest = BuildTestGraphQLClient(responseMessage: response);
+            var request = BuildGraphQLRequest();
+
+            var result = await clientUnderTest.ExecuteRequest(request);
+
+            result.Data.Should().BeNull();
+            var error = result.Errors[0].ToObject<GraphQLError>();
+            error.Message.Should().Be($"HTTP response is not success (code {System.Net.HttpStatusCode.Unauthorized})");
+            error.Extensions.Exception.Should().BeNull();
+            error.Extensions.Request.Should().BeEquivalentTo(request);
+            error.Extensions.Response.Should().Be(stringContent);
+        }
+
         #endregion
 
         #region typed execution
@@ -103,7 +124,6 @@ type Query {
 
         [Test]
         public async Task NullWhenNonNullRequiredAreErrors() {
-
             var stringContent = $"{{\"Data\":{{\"{TestName}\":null}},\"Errors\":[]}}";
 
             var clientUnderTest = BuildTestGraphQLClient(stringContent);
@@ -122,8 +142,8 @@ type Query {
             var messageHandler = new SubstituteHttpMessageHandler(stringContent);
             var httpClient = new HttpClient(messageHandler);
             httpClient.BaseAddress = new System.Uri("http://fake.fake");
-
             var clientUnderTest = new GraphQLClient(httpClient);
+
             clientUnderTest.WithSchema("type Query { aTestQuery(arg1: ID!, arg2: String, arg3: TestType!): TestResult }");
 
             var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestName, Arg1, Arg2, Arg3);
@@ -153,7 +173,6 @@ type Query {
 
         [Test]
         public async Task WrongResultStructureIsJsonError() {
-
             var stringContent = $"{{\"Data\":{{\"{TestName}\":{{\"notValid\": \"yep not a TestResult\"}}}},\"Errors\":[]}}";
 
             var clientUnderTest = BuildTestGraphQLClient(stringContent);
