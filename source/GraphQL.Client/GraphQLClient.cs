@@ -19,8 +19,10 @@ namespace GraphQL.Client {
 
         private readonly HttpClient Client;
 
-        private Dictionary<string, FieldType> Queries = new Dictionary<string, FieldType>();
-        private Dictionary<string, FieldType> Mutations = new Dictionary<string, FieldType>();
+        private readonly Dictionary<string, FieldType> Queries = new Dictionary<string, FieldType>();
+        private readonly Dictionary<string, FieldType> Mutations = new Dictionary<string, FieldType>();
+
+        private readonly JsonSerializer SerializerWithErrors = new JsonSerializer{ MissingMemberHandling = MissingMemberHandling.Error };
 
         public GraphQLClient(HttpClient client) {
             Client = client;
@@ -32,13 +34,16 @@ namespace GraphQL.Client {
         public void WithSchema(string schemaString) {
             var graphQLSchema = GraphQL.Types.Schema.For(schemaString);
 
-            foreach (var field in graphQLSchema.Query.Fields) {
-                Queries[field.Name] = field;
+            if(graphQLSchema.Query != null) {
+                foreach (var field in graphQLSchema.Query.Fields) {
+                    Queries[field.Name] = field;
+                }
             }
-            foreach (var field in graphQLSchema.Mutation.Fields) {
-                Mutations[field.Name] = field;
+            if(graphQLSchema.Mutation != null) {
+                foreach (var field in graphQLSchema.Mutation.Fields) {
+                    Mutations[field.Name] = field;
+                }
             }
-
         }
 
         public async Task<Result<TResult>> ExecuteRequest<TResult>(string name, string operationName = null) {
@@ -93,8 +98,6 @@ namespace GraphQL.Client {
                 JObject variables) =>
             await ExecuteRequest(RequestBuilder.AstToRequest(operationType, operationName, variableDefinitions, selection, variables));
 
-        // Built around ideas from https://johnthiriet.com/efficient-post-calls/
-        // WIP & not yet tested properly
         public async Task<GraphQLResult> ExecuteRequest(GraphQLRequest request) {
             // FIXME: need cancelation tokens????
             //
@@ -130,12 +133,12 @@ namespace GraphQL.Client {
                 result.Errors.Add(JObject.FromObject(error));
                 return result;
 
-            } catch (Exception ex) {
+            } catch (Exception ex) { // WebException ???
                 var result = new GraphQLResult();
                 result.Errors = new JArray();
 
                 var error = new GraphQLError {
-                    Message = "Unknown exception while processing request",
+                    Message = "Exception while processing request",
                     Extensions = new GraphQLErrorExtension {
                         Exception = ex,
                         Response = responseContent,
@@ -143,7 +146,7 @@ namespace GraphQL.Client {
                     }
                 };
 
-                result.Errors.Add(error);
+                result.Errors.Add(JObject.FromObject(error));
                 return result;
             }
 
@@ -156,12 +159,18 @@ namespace GraphQL.Client {
                 if (data == null) {
                     asTResult = default(TResult);
                 } else {
-                    asTResult = data.ToObject<TResult>();
+                    // Not sure yet if this is 100% right.  Maybe the serializer
+                    // should be an option, cause there might be cases where you
+                    // want to ingore the extra properties.
+                    asTResult = data.ToObject<TResult>(SerializerWithErrors);
                 }
 
                 if (nonNull && (data == null || asTResult == null)) {
+                    // Not sure if this would occur.  A GraphQL
+                    // server should have already errored and be returning that
+                    // error, right?
                     var error = new GraphQLError {
-                        Message = $"Returned null, but GraphQL required non-null.",
+                        Message = "Returned null, but GraphQL required non-null.",
                         Extensions = new GraphQLErrorExtension {
                             Response = JsonConvert.SerializeObject(result, Formatting.Indented),
                             Request = request
@@ -185,6 +194,8 @@ namespace GraphQL.Client {
             }
         }
 
+        // Built around ideas from https://johnthiriet.com/efficient-post-calls/
+        // WIP 
         private HttpContent CreateHttpContent(GraphQLRequest request) {
             HttpContent httpContent;
 
