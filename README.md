@@ -68,7 +68,7 @@ GraphQL ID type is treated as string.  C# types string, int, float, double and b
 Results are returned as [FluentResults](https://github.com/altmann/FluentResults), so you can inspect success like:
 
 ```
-var result = await graphqlClient.ExecuteRequest<Person, string>("id-123");
+var result = await graphqlClient.ExecuteRequest<Person, string>("getPerson", "id-123");
 if(result.IsFailed) { ... deal with failure ... }
 Person person = result.Value;
 ```
