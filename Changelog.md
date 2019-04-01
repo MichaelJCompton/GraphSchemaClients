@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 Adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## 0.1.0
+
+Initial version with typed GraphQL calls.
+
 ## 0.0.0 - [template]
 
 ### Added
