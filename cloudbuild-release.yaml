@@ -15,6 +15,6 @@ steps:
 timeout: 240s
 
 secrets:
-- kmsKeyName: projects/dgraph-dotnet/locations/global/keyRings/graphschema-keys/cryptoKeys/nuget-key
+- kmsKeyName: projects/$PROJECT_ID/locations/global/keyRings/graphschemaio-keys/cryptoKeys/nuget-key
   secretEnv:
-    NUGET_KEY: CiQApAQ/k3VULPs5hj2kRL6gXQyb94OIHDV2hHOmRlaf2cWS4VwSWAC+fJfRoNsPlocnmRiyzppho5iqovEVUlVZi3ZZ0mlItxHUJpXpOtWKuTAgFENzLapF3PZtEKAqj0Je6ex49NNYrOWHcP0fD/Yc+loULySEQukLHZ0ujDY=
+    NUGET_KEY: CiQA/F0xt5ED6KEagY03fqOcMNAHdfuUFRt4hScA4f3xL6Li0AcSWABcFlmfltBLf34SfAZl30CAjRQYhS02nxzmq0usLSIpqBDi/nn1tIkqx9JzR7pQmXhZ5yGYIYFRKUQ6PQG2RGiJf+jb8tmcO+WsVrlQUM7AmDZmaFLD/ao=
