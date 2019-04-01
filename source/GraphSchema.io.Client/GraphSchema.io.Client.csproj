@@ -15,6 +15,7 @@
     <Copyright>Michael Compton</Copyright>
     <PackageProjectUrl>https://github.com/MichaelJCompton/GraphSchemaClients</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MichaelJCompton/GraphSchemaClients</RepositoryUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
   </PropertyGroup>
   
