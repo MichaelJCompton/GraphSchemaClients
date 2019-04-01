@@ -10,11 +10,12 @@ steps:
 - name: microsoft/dotnet:2.2-sdk
   args: ['bash', '-c', 'dotnet pack source/GraphSchema.io.Client/GraphSchema.io.Client.csproj -c Release -p:Version=$(cat GITVERSION) --no-restore --no-build --output ../../artifacts']
 - name: microsoft/dotnet:2.2-sdk
-  args: ['bash', '-c', 'dotnet nuget push artifacts/GraphSchema.io.Client.$(cat GITVERSION).nupkg -k $$NUGET_KEY -s https://api.nuget.org/v3/index.json']
+  entrypoint: 'bash'
+  args: [-c', 'dotnet nuget push artifacts/GraphSchema.io.Client.$(cat GITVERSION).nupkg -k $$NUGET_KEY -s https://api.nuget.org/v3/index.json']
   secretEnv: ['NUGET_KEY']
 timeout: 240s
 
 secrets:
-- kmsKeyName: projects/$PROJECT_ID/locations/global/keyRings/graphschemaio-keys/cryptoKeys/nuget-key
+- kmsKeyName: projects/graphschemaio/locations/global/keyRings/graphschemaio-keys/cryptoKeys/nuget-key
   secretEnv:
     NUGET_KEY: CiQA/F0xt5ED6KEagY03fqOcMNAHdfuUFRt4hScA4f3xL6Li0AcSWABcFlmfltBLf34SfAZl30CAjRQYhS02nxzmq0usLSIpqBDi/nn1tIkqx9JzR7pQmXhZ5yGYIYFRKUQ6PQG2RGiJf+jb8tmcO+WsVrlQUM7AmDZmaFLD/ao=
