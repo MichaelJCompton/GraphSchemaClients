@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>GraphSchema.io.Client</RootNamespace>
-    <PackageId>GraphSchema.Client</PackageId>
+    <PackageId>GraphSchema.io.Client</PackageId>
     <LangVersion>latest</LangVersion>
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
 
