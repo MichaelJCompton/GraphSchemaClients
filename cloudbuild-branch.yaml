@@ -1,6 +1,27 @@
 steps:
+- name: gcr.io/cloud-builders/git
+  args: ['fetch', '--unshallow']
+- name: gcr.io/graphschema/dotnet_gitversion
+  args: ['bash', '-c', 'dotnet-gitversion /showvariable FullSemVer | sed "s/+/-/g" > GITVERSION']
 - name: microsoft/dotnet:2.2-sdk
-  args: ['dotnet', 'build']
+  args: ['bash', '-c', 'dotnet build -c Release -p:Version=$(cat GITVERSION)']
 - name: microsoft/dotnet:2.2-sdk
-  args: ['dotnet', 'test', '--no-build']
+  args: ['bash', '-c', 'dotnet test -c Release -p:Version=$(cat GITVERSION) --no-build --no-restore']
+- name: microsoft/dotnet:2.2-sdk
+  args: ['bash', '-c', 'dotnet pack source/GraphQL.Client/GraphQL.Client.csproj -c Release -p:Version=$(cat GITVERSION) --no-restore --no-build --output ../../artifacts']
+- name: microsoft/dotnet:2.2-sdk
+  args: ['bash', '-c', 'dotnet pack source/GraphSchema.io.Client/GraphSchema.io.Client.csproj -c Release -p:Version=$(cat GITVERSION) --no-restore --no-build --output ../../artifacts']
+- name: microsoft/dotnet:2.2-sdk
+  entrypoint: 'bash'
+  args: ['-c', 'dotnet nuget push artifacts/GraphSchema.GraphQL.Client.$(cat GITVERSION).nupkg -k $$NUGET_KEY -s https://f.feedz.io/graphschema-io/graphschemaclients/nuget -ss https://f.feedz.io/graphschema-io/graphschemaclients/symbols']
+  secretEnv: ['NUGET_KEY']
+- name: microsoft/dotnet:2.2-sdk
+  entrypoint: 'bash'
+  args: ['-c', 'dotnet nuget push artifacts/GraphSchema.io.Client.$(cat GITVERSION).nupkg -k $$NUGET_KEY -s https://f.feedz.io/graphschema-io/graphschemaclients/nuget -ss https://f.feedz.io/graphschema-io/graphschemaclients/symbols']
+  secretEnv: ['NUGET_KEY']
+timeout: 240s
 
+secrets:
+- kmsKeyName: projects/graphschemaio/locations/global/keyRings/graphschemaio-keys/cryptoKeys/nuget-key
+  secretEnv:
+    NUGET_KEY: CiQA/F0xt6zA7eM2zDMpVKeXFZ52fbHk9Qe3OqiByqUXZJjs1i0STgBcFlmfnuSt1uazynh5YEMeMdnAPxVBEmV0qh+ObFUvEXknbN4K+dG63XhrsIEfOVfQgAuzevHrWv/wdX6K2NNXG3Ng1hyEOM9guYditw==
