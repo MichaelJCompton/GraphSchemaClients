@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Assent;
 using FluentAssertions;
@@ -35,6 +36,24 @@ type Query {
             var arg3 = new TestType { AnInt = 42, AFloat = 4.2f, ADouble = 4.2, TheTime = DateTime.MinValue };
 
             var result = RequestBuilder.BuildRequest<TestResult, string, string, TestType>(TestName, TestName, "query", TestField, arg1, arg2, arg3);
+
+            result.IsSuccess.Should().BeTrue();
+            this.Assent(JsonConvert.SerializeObject(result.Value, Formatting.Indented));
+        }
+
+        [Test]
+        public void RequestIsAsExpectedWithListTypes() {
+            var graphQLSchema = GraphQL.Types.Schema.For(@"
+type Query {
+    aTestQuery(arg1: ID!, arg2: String, arg3: [TestType!]!): [TestResult!]!
+}
+");
+            var testField = graphQLSchema.Query.Fields.FirstOrDefault();
+            var arg1 = "ID-123";
+            var arg2 = "a string arg";
+            var arg3 = new TestType { AnInt = 42, AFloat = 4.2f, ADouble = 4.2, TheTime = DateTime.MinValue };
+
+            var result = RequestBuilder.BuildRequest<List<TestResult>, string, string, List<TestType>>(TestName, TestName, "query", testField, arg1, arg2, new List<TestType>{ arg3 });
 
             result.IsSuccess.Should().BeTrue();
             this.Assent(JsonConvert.SerializeObject(result.Value, Formatting.Indented));
