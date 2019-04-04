@@ -8,6 +8,8 @@ using GraphQL.Client.Extensions;
 using GraphQL.Language.AST;
 using GraphQL.Types;
 using GraphQL.Utilities;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using NUnit.Framework;
 
 namespace GraphQL.Client.tests.Extensions {
@@ -195,6 +197,11 @@ namespace GraphQL.Client.tests.Extensions {
             this.Assent(AstPrinter.Print(typeof(DeepNestedGraphQLClass).AsSelctionSet(3)), SelectionSetAssentConfiguration);
         }
 
+        [Test]
+        public void AsSelctionSetRespectsJsonProperties() {
+            this.Assent(AstPrinter.Print(typeof(CamelCaseClass).AsSelctionSet(3)), SelectionSetAssentConfiguration);
+        }
+
         #endregion
 
         private class ATestClass {
@@ -222,6 +229,15 @@ namespace GraphQL.Client.tests.Extensions {
             public ATestGraphQLClass Edge { get; set; }
             public ANestedGraphQLClass NestedEdge { get; set; }
             public DeepNestedGraphQLClass DeepEdge { get; set; }
+        }
+
+        [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+        [GraphQLModel]
+        private class CamelCaseClass {
+            public int AnInt { get; set; }
+            public ATestGraphQLClass Edge { get; set; }
+            [JsonProperty(PropertyName = "newName")]
+            public string Renamed { get; set; }
         }
     }
 }

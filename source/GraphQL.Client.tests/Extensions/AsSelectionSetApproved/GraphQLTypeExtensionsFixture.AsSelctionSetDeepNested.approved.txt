@@ -1,33 +1,33 @@
 {
-  anInt
-  edge {
-    anInt
-    aFloat
-    aDouble
-    theTime
+  AnInt
+  Edge {
+    AnInt
+    AFloat
+    ADouble
+    TheTime
   }
-  nestedEdge {
-    anInt
-    edge {
-      anInt
-      aFloat
-      aDouble
-      theTime
+  NestedEdge {
+    AnInt
+    Edge {
+      AnInt
+      AFloat
+      ADouble
+      TheTime
     }
   }
-  deepEdge {
-    anInt
-    edge {
-      anInt
-      aFloat
-      aDouble
-      theTime
+  DeepEdge {
+    AnInt
+    Edge {
+      AnInt
+      AFloat
+      ADouble
+      TheTime
     }
-    nestedEdge {
-      anInt
+    NestedEdge {
+      AnInt
     }
-    deepEdge {
-      anInt
+    DeepEdge {
+      AnInt
     }
   }
 }

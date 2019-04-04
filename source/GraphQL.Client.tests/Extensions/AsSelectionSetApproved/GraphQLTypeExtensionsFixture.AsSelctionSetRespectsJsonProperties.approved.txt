@@ -1,9 +1,10 @@
 {
-  AnInt
-  Edge {
+  anInt
+  edge {
     AnInt
     AFloat
     ADouble
     TheTime
   }
+  newName
 }

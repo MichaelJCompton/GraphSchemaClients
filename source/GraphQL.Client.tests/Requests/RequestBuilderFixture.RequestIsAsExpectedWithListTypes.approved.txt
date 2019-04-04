@@ -1,5 +1,5 @@
 {
-  "Query": "query aTestQuery($arg1: ID!, $arg2: String, $arg3: [TestType!]!) {\n aTestQuery(arg1: $arg1, arg2: $arg2, arg3: $arg3) {\n  anInt\n  edge {\n    anInt\n    aFloat\n    aDouble\n    theTime\n  }\n} \n}",
+  "Query": "query aTestQuery($arg1: ID!, $arg2: String, $arg3: [TestType!]!) {\n aTestQuery(arg1: $arg1, arg2: $arg2, arg3: $arg3) {\n  AnInt\n  Edge {\n    AnInt\n    AFloat\n    ADouble\n    TheTime\n  }\n} \n}",
   "OperationName": "aTestQuery",
   "Variables": {
     "arg1": "ID-123",

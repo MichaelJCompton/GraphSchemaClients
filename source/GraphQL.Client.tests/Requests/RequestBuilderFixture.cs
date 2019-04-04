@@ -86,6 +86,24 @@ type Query {
         }
 
         [Test]
+        public void RequestIsAsExpectedWithJsonAttributes() {
+            var graphQLSchema = GraphQL.Types.Schema.For(@"
+type Query {
+    aTestQuery(arg1: ID!, arg2: String, arg3: CamelTestType): CamelTestResult
+}
+");
+            var testField = graphQLSchema.Query.Fields.FirstOrDefault();
+            var arg1 = "ID-123";
+            var arg2 = "a string arg";
+            var arg3 = new CamelTestType { AnInt = 42, AFloat = 4.2f, ADouble = 4.2, TheTime = DateTime.MinValue };
+
+            var result = RequestBuilder.BuildRequest<CamelTestResult, string, string, CamelTestType>(TestName, TestName, "query", testField, arg1, arg2, arg3);
+
+            result.IsSuccess.Should().BeTrue();
+            this.Assent(JsonConvert.SerializeObject(result.Value, Formatting.Indented));
+        }
+
+        [Test]
         public void FailIfResultTypeNotCompatibleWithField() {
             var result = RequestBuilder.BuildRequest<TestType, string, string, TestType>(TestName, TestName, "query", TestField, null, null, null);
 

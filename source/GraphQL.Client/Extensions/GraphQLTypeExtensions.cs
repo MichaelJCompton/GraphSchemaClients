@@ -1,11 +1,24 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using GraphQL.Client.Attributes;
 using GraphQL.Language.AST;
 using GraphQL.Types;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace GraphQL.Client.Extensions {
     public static class GraphQLTypeExtensions {
+
+        /* fixformat ignore:start */
+        private static IDictionary<string, NamingStrategy> NamingStrategies =
+            new Dictionary<string, NamingStrategy> { 
+                { nameof(DefaultNamingStrategy), new DefaultNamingStrategy() },
+                { nameof(CamelCaseNamingStrategy), new CamelCaseNamingStrategy() },
+                { nameof(SnakeCaseNamingStrategy), new SnakeCaseNamingStrategy() }
+            };
+        /* fixformat ignore:end */
 
         public static bool IsNonNullGraphType(this IGraphType type) {
             return type is NonNullGraphType;
@@ -34,8 +47,8 @@ namespace GraphQL.Client.Extensions {
             }
             switch (TypeNameMap(type.GetTypeInfo().Name)) {
                 case "String":
-                case "Int": 
-                case "Float": 
+                case "Int":
+                case "Float":
                 case "Boolean":
                 case "DateTime":
                     return true;
@@ -83,22 +96,43 @@ namespace GraphQL.Client.Extensions {
             }
         }
 
+        private static NamingStrategy GetNamingStratgey(this Type type) {
+            var objectAttribute = type.GetTypeInfo().GetCustomAttributes<JsonObjectAttribute>(false).FirstOrDefault();
+            return objectAttribute?.NamingStrategyType == null
+                ? NamingStrategies[nameof(DefaultNamingStrategy)]
+                : NamingStrategies[objectAttribute.NamingStrategyType.Name];
+        }
+
+        private static string ResolvePropertyName(this PropertyInfo propInfo, NamingStrategy namingStrategy) {
+            var propertyAttribute = propInfo.GetCustomAttributes<JsonPropertyAttribute>(false).FirstOrDefault();
+
+            string mappedName;
+            bool hasSpecifiedName;
+            if (propertyAttribute?.PropertyName != null) {
+                mappedName = propertyAttribute.PropertyName;
+                hasSpecifiedName = true;
+            } else {
+                mappedName = propInfo.Name;
+                hasSpecifiedName = false;
+            }
+
+            return namingStrategy.GetPropertyName(mappedName, hasSpecifiedName);
+        }
+
         public static SelectionSet AsSelctionSet(this Type type, int depth) {
             var result = new SelectionSet();
             if (depth <= 0 || !type.GetTypeInfo().IsDefined(typeof(GraphQLModelAttribute))) {
                 return result;
             }
 
+            NamingStrategy namingStrategy = type.GetNamingStratgey();
+
             foreach (var property in type.GetProperties()) {
                 if (!property.PropertyType.IsGraphQLType()) {
                     continue;
                 }
 
-                // ToCamelCase() is just a quick solution for my,
-                // GrahpSchema-based, use-case.  Something more general might be
-                // needed if others pick this up. Might be better to have some
-                // sort of converter used here.
-                var field = new Field(null, new NameNode(property.Name.ToCamelCase()));
+                var field = new Field(null, new NameNode(property.ResolvePropertyName(namingStrategy)));
 
                 if (property.PropertyType.GetTypeInfo().IsDefined(typeof(GraphQLModelAttribute))) {
                     if (depth > 1) {

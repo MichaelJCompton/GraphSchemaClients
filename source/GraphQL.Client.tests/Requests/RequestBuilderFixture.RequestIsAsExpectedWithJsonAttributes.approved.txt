@@ -1,0 +1,14 @@
+{
+  "Query": "query aTestQuery($arg1: ID!, $arg2: String, $arg3: CamelTestType) {\n aTestQuery(arg1: $arg1, arg2: $arg2, arg3: $arg3) {\n  anInt\n  edge {\n    AnInt\n    AFloat\n    ADouble\n    TheTime\n  }\n} \n}",
+  "OperationName": "aTestQuery",
+  "Variables": {
+    "arg1": "ID-123",
+    "arg2": "a string arg",
+    "arg3": {
+      "anInt": 42,
+      "aFloat": 4.2,
+      "aDouble": 4.2,
+      "dayTime": "0001-01-01T00:00:00"
+    }
+  }
+}

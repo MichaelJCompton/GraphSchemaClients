@@ -1,6 +1,6 @@
 {
-  anInt
-  aFloat
-  aDouble
-  theTime
+  AnInt
+  AFloat
+  ADouble
+  TheTime
 }
