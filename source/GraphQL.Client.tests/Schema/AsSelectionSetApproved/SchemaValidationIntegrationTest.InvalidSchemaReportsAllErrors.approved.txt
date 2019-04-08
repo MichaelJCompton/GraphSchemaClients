@@ -1,0 +1,6 @@
+Result type of anotherQuery does not match result type in schema.
+Argument arg2 of yetAnotherQuery does not match type in schema
+Type NotGraphQLModel isn't a GraphQL type.
+Type NotGraphQLModel isn't a GraphQL type.
+aMissingMutation not found in schema.
+For anotherMutation, couldn't find schema argument matching arg3456.

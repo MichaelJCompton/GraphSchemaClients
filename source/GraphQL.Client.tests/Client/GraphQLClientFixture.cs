@@ -9,151 +9,68 @@ using FluentAssertions;
 using FluentResults;
 using GraphQL.Client.Models;
 using GraphQL.Client.Requests;
+using GraphQL.Client.Schema;
 using GraphQL.Client.tests.TestTypes;
 using GraphQL.Types;
 using Newtonsoft.Json;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace GraphQL.Client.tests.Client {
 
     public class GraphQLClientFixture {
 
-        private FieldType TestField;
-        private string TestName = "aTestQuery";
-        private string Schema = @"
+        private IGraphQLRequestExecutor ReqExecutor;
+        private IRequestBuilder ReqBuilder;
+        private IResultBuilder ResBuilder;
+        private IPartialSchemaProvider SchemaProv;
+        private ISchemaValidator Validator;
+
+        private FieldType TestQuery;
+        private FieldType TestMutation;
+
+        public string Schema = @"
 type Query {
     aTestQuery(arg1: ID!, arg2: String, arg3: TestType!): TestResult!
 }
-";
 
-        private string Arg1 = "ID-123";
-        private string Arg2 = "a string arg";
-        private TestType Arg3 = new TestType { AnInt = 42, AFloat = 4.2f, ADouble = 4.2, TheTime = DateTime.MinValue };
+type Mutation {
+    aTestMutation(arg1: ID!, arg2: String, arg3: TestType!): TestResult!
+}
+";
 
         [OneTimeSetUp]
         public void CreateTestField() {
             var graphQLSchema = GraphQL.Types.Schema.For(Schema);
 
-            TestField = graphQLSchema.Query.Fields.FirstOrDefault();
+            TestQuery = graphQLSchema.Query.Fields.FirstOrDefault();
+            TestMutation = graphQLSchema.Mutation.Fields.FirstOrDefault();
         }
 
-        #region Basic Execution
-
-        [Test]
-        public async Task ValidGraphQLResultISReturnedUnchanged() {
-            var stringContent = "{\"Data\":{\"aVal\":27},\"Errors\":[{\"message\":\"a message\"}]}";
-            var clientUnderTest = BuildTestGraphQLClient(stringContent);
-            var request = BuildGraphQLRequest();
-
-            var result = await clientUnderTest.ExecuteRequest(new GraphQLRequest());
-
-            JsonConvert.SerializeObject(result).Should().Be(stringContent);
+        [OneTimeSetUp]
+        public void CreateSubstitutes() {
+            ReqExecutor = Substitute.For<IGraphQLRequestExecutor>();
+            ReqBuilder = Substitute.For<IRequestBuilder>();
+            ResBuilder = Substitute.For<IResultBuilder>();
+            SchemaProv = Substitute.For<IPartialSchemaProvider>();
+            Validator = Substitute.For<ISchemaValidator>();
         }
 
         [Test]
-        public async Task ExceptionIsErrorResult() {
-            var clientUnderTest = BuildTestGraphQLClient();
-            var request = BuildGraphQLRequest();
+        public async Task UnTypedGraphQLRequestPassesStraightThrough() {
+            var json = "{\"Data\":{\"aVal\":27},\"Errors\":[{\"message\":\"a message\"}]}";
+            var clientUnderTest = BuildTestGraphQLClient(resultJson: json);
+            var request = new GraphQLRequest { Query = "A Query", OperationName = "An op" };
 
             var result = await clientUnderTest.ExecuteRequest(request);
 
-            result.Data.Should().BeNull();
-            var error = result.Errors[0].ToObject<GraphQLError>();
-            error.Message.Should().Be("Exception while processing request");
-            error.Extensions.Exception.Should().NotBeNull();
-            error.Extensions.Request.Should().BeEquivalentTo(request);
-            error.Extensions.Response.Should().BeNull(because: "the error was thrown before a response was recieved");
-        }
-
-        [Test]
-        public async Task InvalidJsonIsErrorResult() {
-            var stringContent = "{\"Data\":{\"aVal\":27},\"Errors\":[{\"message\":\"a message, but this is invalid JSON\"";
-            var clientUnderTest = BuildTestGraphQLClient(stringContent);
-            var request = BuildGraphQLRequest();
-
-            var result = await clientUnderTest.ExecuteRequest(request);
-
-            result.Data.Should().BeNull();
-            var error = result.Errors[0].ToObject<GraphQLError>();
-            error.Message.Should().Be("Json Serialization Exception while reading GraphQL response");
-            error.Extensions.Exception.Should().NotBeNull();
-            error.Extensions.Request.Should().BeEquivalentTo(request);
-            error.Extensions.Response.Should().Be(stringContent);
-        }
-
-        [Test]
-        public async Task HTTPNotOKIsErrorResult() {
-            var stringContent = "An Error";
-            // Not sure how often this should occur.  Most GraphQL servers
-            // should return an OK with an error payload, but there'll also be
-            // http error cases.
-            var response = new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized);
-            response.Content = new StringContent(stringContent);
-            var clientUnderTest = BuildTestGraphQLClient(responseMessage: response);
-            var request = BuildGraphQLRequest();
-
-            var result = await clientUnderTest.ExecuteRequest(request);
-
-            result.Data.Should().BeNull();
-            var error = result.Errors[0].ToObject<GraphQLError>();
-            error.Message.Should().Be($"HTTP response is not success (code {System.Net.HttpStatusCode.Unauthorized})");
-            error.Extensions.Exception.Should().BeNull();
-            error.Extensions.Request.Should().BeEquivalentTo(request);
-            error.Extensions.Response.Should().Be(stringContent);
-        }
-
-        #endregion
-
-        #region typed execution
-
-        [Test]
-        public async Task ValidRequestDeserializes() {
-            var testResult = new TestResult {
-                AnInt = 24,
-                Edge = Arg3
-            };
-            var serializedResult = JsonConvert.SerializeObject(testResult);
-            var stringContent = $"{{\"Data\":{{\"{TestName}\":{serializedResult}}},\"Errors\":[]}}";
-
-            var clientUnderTest = BuildTestGraphQLClient(stringContent);
-
-            var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestName, Arg1, Arg2, Arg3);
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Should().BeEquivalentTo(testResult);
-        }
-
-        [Test]
-        public async Task NullWhenNonNullRequiredAreErrors() {
-            var stringContent = $"{{\"Data\":{{\"{TestName}\":null}},\"Errors\":[]}}";
-
-            var clientUnderTest = BuildTestGraphQLClient(stringContent);
-
-            var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestName, Arg1, Arg2, Arg3);
-            result.IsSuccess.Should().BeFalse();
-            var error = (result.Errors[0] as GraphQLErrorReason).GraphQLError;
-            error.Message.Should().Be("Returned null, but GraphQL required non-null.");
-            error.Extensions.Request.Should().NotBeNull();
-            error.Extensions.Response.Should().Be(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<GraphQLResult>(stringContent), Formatting.Indented));
-        }
-
-        [Test]
-        public async Task NullOKWhenSchemaAllowsIt() {
-            var stringContent = $"{{\"Data\":{{\"{TestName}\":null}},\"Errors\":[]}}";
-            var messageHandler = new SubstituteHttpMessageHandler(stringContent);
-            var httpClient = new HttpClient(messageHandler);
-            httpClient.BaseAddress = new System.Uri("http://fake.fake");
-            var clientUnderTest = new GraphQLClient(httpClient);
-
-            clientUnderTest.WithSchema("type Query { aTestQuery(arg1: ID!, arg2: String, arg3: TestType!): TestResult }");
-
-            var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestName, Arg1, Arg2, Arg3);
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Should().BeNull();
+            JsonConvert.SerializeObject(result).Should().Be(json);
+            await ReqExecutor.Received().ExecuteRequest(request);
         }
 
         [Test]
         public async Task NameMustBeNonNull() {
-            var clientUnderTest = new GraphQLClient(new HttpClient());
+            var clientUnderTest = BuildTestGraphQLClient();
 
             var result = await clientUnderTest.ExecuteRequest<Object>(null);
 
@@ -163,7 +80,7 @@ type Query {
 
         [Test]
         public async Task NameMustBePresent() {
-            var clientUnderTest = new GraphQLClient(new HttpClient());
+            var clientUnderTest = BuildTestGraphQLClient();
 
             var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>("aDifferetName", null, null, null);
 
@@ -172,70 +89,46 @@ type Query {
         }
 
         [Test]
-        public async Task WrongResultStructureIsJsonError() {
-            var stringContent = $"{{\"Data\":{{\"{TestName}\":{{\"notValid\": \"yep not a TestResult\"}}}},\"Errors\":[]}}";
+        public async Task RequestBuilderGetsQuery() {
+            var clientUnderTest = BuildTestGraphQLClient();
 
-            var clientUnderTest = BuildTestGraphQLClient(stringContent);
+            ReqBuilder.BuildRequest<TestResult, string, string, TestType>(
+                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                    Arg.Any<FieldType>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TestType>())
+                .Returns(Results.Fail<GraphQLRequest>("Didn't try"));
 
-            var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestName, Arg1, Arg2, Arg3);
-            result.IsSuccess.Should().BeFalse();
-            var error = (result.Errors[0] as GraphQLErrorReason).GraphQLError;
-            error.Message.Should().Be("Json Serialization Exception while reading GraphQL response");
-            error.Extensions.Request.Should().NotBeNull();
-            error.Extensions.Response.Should().Be(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<GraphQLResult>(stringContent), Formatting.Indented));
+            var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestValues.QueryName, TestValues.Arg1, TestValues.Arg2, TestValues.Arg3);
+
+            ReqBuilder.Received().BuildRequest<TestResult, string, string, TestType>(TestValues.QueryName, TestValues.QueryName, "query", TestQuery, TestValues.Arg1, TestValues.Arg2, TestValues.Arg3);
         }
 
-        #endregion
+        [Test]
+        public async Task RequestBuilderGetsMutation() {
+            var clientUnderTest = BuildTestGraphQLClient();
 
-        private GraphQLClient BuildTestGraphQLClient(string responseContent = null, HttpResponseMessage responseMessage = null) {
-            SubstituteHttpMessageHandler messageHandler;
-            if (responseMessage != null) {
-                messageHandler = new SubstituteHttpMessageHandler(responseMessage);
-            } else if (!string.IsNullOrWhiteSpace(responseContent)) {
-                messageHandler = new SubstituteHttpMessageHandler(responseContent);
-            } else {
-                messageHandler = new SubstituteHttpMessageHandler();
+            ReqBuilder.BuildRequest<TestResult, string, string, TestType>(
+                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                    Arg.Any<FieldType>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TestType>())
+                .Returns(Results.Fail<GraphQLRequest>("Didn't try"));
+
+            var result = await clientUnderTest.ExecuteRequest<TestResult, string, string, TestType>(TestValues.MutationName, TestValues.Arg1, TestValues.Arg2, TestValues.Arg3);
+
+            ReqBuilder.Received().BuildRequest<TestResult, string, string, TestType>(TestValues.MutationName, TestValues.MutationName, "mutation", TestMutation, TestValues.Arg1, TestValues.Arg2, TestValues.Arg3);
+
+        }
+
+        private GraphQLClient BuildTestGraphQLClient(string resultJson = null) {
+
+            if (resultJson != null) {
+                ReqExecutor.ExecuteRequest(Arg.Any<GraphQLRequest>()).Returns(JsonConvert.DeserializeObject<GraphQLResult>(resultJson));
             }
 
-            var httpClient = new HttpClient(messageHandler);
-            httpClient.BaseAddress = new System.Uri("http://fake.fake");
+            SchemaProv.Queries.Returns(new Dictionary<string, FieldType>() { { TestValues.QueryName, TestQuery } });
+            SchemaProv.Mutations.Returns(new Dictionary<string, FieldType>() { { TestValues.MutationName, TestMutation } });
 
-            var client = new GraphQLClient(httpClient);
-            client.WithSchema(Schema);
+            var client = new GraphQLClient(ReqExecutor, ReqBuilder, ResBuilder, SchemaProv, Validator);
+
             return client;
-        }
-
-        private GraphQLRequest BuildGraphQLRequest() {
-            return RequestBuilder.BuildRequest<TestResult, string, string, TestType>(TestName, TestName, "query", TestField, Arg1, Arg2, Arg3).Value;
-        }
-
-        public class SubstituteHttpMessageHandler : HttpMessageHandler {
-
-            private readonly string ResponseContent;
-
-            private readonly HttpResponseMessage Response;
-
-            public SubstituteHttpMessageHandler() { }
-
-            public SubstituteHttpMessageHandler(string responseContent) {
-                ResponseContent = responseContent;
-            }
-
-            public SubstituteHttpMessageHandler(HttpResponseMessage response) {
-                Response = response;
-            }
-
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
-                if (Response != null) {
-                    return Task.FromResult(Response);
-                } else if (!string.IsNullOrWhiteSpace(ResponseContent)) {
-                    var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
-                    response.Content = new StringContent(ResponseContent);
-                    return Task.FromResult(response);
-                } else {
-                    throw new WebException("An Error");
-                }
-            }
         }
 
     }

@@ -10,30 +10,13 @@ using GraphQL.Utilities;
 using Newtonsoft.Json.Linq;
 
 namespace GraphQL.Client.Requests {
-    public class RequestBuilder {
+    public class RequestBuilder : IRequestBuilder {
 
-        public static GraphQLRequest AstToRequest(
-            string operationType,
-            string operationName,
-            VariableDefinitions variableDefinitions,
-            ISelection selection,
-            JObject variables
-        ) {
-
-            var formattedVariableDefinitions = variableDefinitions.Any()
-                ? "(" + string.Join(", ", variableDefinitions.Select(AstPrinter.Print)) + ")"
-                : "";
-
-            return new GraphQLRequest {
-                Query = $"{operationType} {operationName}{formattedVariableDefinitions} {{\n {AstPrinter.Print(selection)} \n}}",
-                    OperationName = operationName,
-                    Variables = variables
-            };
-        }
+        public RequestBuilder() { }
 
         // Pre: name and operationName are both non-null and not empty
         // Pre: fieldType is non null
-        public static Result<GraphQLRequest> BuildRequest<TResult, TArg1, TArg2, TArg3>(
+        public Result<GraphQLRequest> BuildRequest<TResult, TArg1, TArg2, TArg3>(
             string name,
             string operationName,
             string operationType,
@@ -111,6 +94,25 @@ namespace GraphQL.Client.Requests {
                 variableDefinitions,
                 requestField,
                 variables));
+        }
+
+        public GraphQLRequest AstToRequest(
+            string operationType,
+            string operationName,
+            VariableDefinitions variableDefinitions,
+            ISelection selection,
+            JObject variables
+        ) {
+
+            var formattedVariableDefinitions = variableDefinitions.Any()
+                ? "(" + string.Join(", ", variableDefinitions.Select(AstPrinter.Print)) + ")"
+                : "";
+
+            return new GraphQLRequest {
+                Query = $"{operationType} {operationName}{formattedVariableDefinitions} {{\n {AstPrinter.Print(selection)} \n}}",
+                    OperationName = operationName,
+                    Variables = variables
+            };
         }
 
     }

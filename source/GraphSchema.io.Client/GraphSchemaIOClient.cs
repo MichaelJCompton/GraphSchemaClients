@@ -5,13 +5,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentResults;
 using GraphQL.Client;
+using GraphQL.Client.Requests;
+using GraphQL.Client.Schema;
 using GraphSchema.io.Client.Models;
 using GraphSchema.io.Client.Resources;
 
 namespace GraphSchema.io.Client {
-    public class GraphSchemaIOClient : GraphQLClient {
-        public GraphSchemaIOClient(HttpClient client) : base(client) {
-            WithSchema(ResourceProvider.GetSchemaFragment());
+    public class GraphSchemaIOClient : GraphQLClient, IGraphSchemaIOClient {
+        public GraphSchemaIOClient(
+            IGraphQLRequestExecutor requestExecutor,
+            IRequestBuilder requestBuilder,
+            IResultBuilder resultBuilder,
+            IPartialSchemaProvider partialSchemaProvider,
+            ISchemaValidator schemaValidator) : base(requestExecutor, requestBuilder, resultBuilder, partialSchemaProvider, schemaValidator) {
         }
 
         public async Task<Result<GraphSchema.io.Client.Models.Environment>> GetEnvironment(string id) {

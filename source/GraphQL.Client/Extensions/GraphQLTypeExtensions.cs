@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using FluentResults;
 using GraphQL.Client.Attributes;
 using GraphQL.Language.AST;
 using GraphQL.Types;
@@ -20,6 +21,33 @@ namespace GraphQL.Client.Extensions {
             };
         /* fixformat ignore:end */
 
+        public static bool IGraphTypeEQ(this IGraphType a, IGraphType b) {
+            if (a is NonNullGraphType aNN && b is NonNullGraphType bNN) {
+                return aNN.ResolvedType.IGraphTypeEQ(bNN.ResolvedType);
+            } else if (a is ListGraphType aL && b is ListGraphType bL) {
+                return aL.ResolvedType.IGraphTypeEQ(bL.ResolvedType);
+            } else {
+                var anamed = a.GetName();
+                var bnamed = b.GetName();
+                return string.Equals(a.GetName(), b.GetName());
+            }
+        }
+
+        public static string GetName(this IGraphType type) {
+            switch (type) {
+                case ObjectGraphType obj:
+                    return obj.Name;
+                case InputObjectGraphType inp:
+                    return inp.Name;
+                case GraphQLTypeReference refType:
+                    return refType.TypeName;
+                case ScalarGraphType scalar:
+                    return scalar.Name;
+                default:
+                    return null;
+            }
+        }
+
         public static bool IsNonNullGraphType(this IGraphType type) {
             return type is NonNullGraphType;
         }
@@ -30,6 +58,20 @@ namespace GraphQL.Client.Extensions {
             }
 
             return type is ListGraphType;
+        }
+
+        public static bool IsSupportedScalarGraphType(this IGraphType type) {
+            switch (type.GetName()) {
+                case "ID":
+                case "String":
+                case "Int":
+                case "Float":
+                case "Boolean":
+                case "DateTime":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         public static Type GetCSNamedType(this Type type) {
@@ -67,6 +109,19 @@ namespace GraphQL.Client.Extensions {
                     return "Float";
                 default:
                     return csTypeName;
+            }
+        }
+
+        public static bool IsScalarGraphQLType(this Type type) {
+            switch (TypeNameMap(type.GetTypeInfo().Name)) {
+                case "String":
+                case "Int":
+                case "Float":
+                case "Boolean":
+                case "DateTime":
+                    return true;
+                default:
+                    return false;
             }
         }
 
