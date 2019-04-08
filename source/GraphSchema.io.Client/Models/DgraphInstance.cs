@@ -8,7 +8,9 @@ namespace GraphSchema.io.Client.Models {
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     [GraphQLModel]
     public class DgraphInstance {
+        public string Id { get; set; }
         public string DgraphId { get; set; }
+        public string Address { get; set; }
         public DateTime CreatedAt { get; set; }
         public int Replicas { get; set; }
         public int Shards { get; set; }
