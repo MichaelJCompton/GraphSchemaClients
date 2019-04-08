@@ -38,14 +38,18 @@ public class PersonInput {
 }
 ```
 
-Initialise the client with the same schema: e.g.
+Add the client into the dependency injection container with the same schema: e.g.
 
 ```
 var httpClient = new HttpClient();
 httpClient.BaseAddress = new System.Uri("http://something/graphql");
 
-var graphqlClient = new GraphQLClient(httpClient);
-graphqlClient.WithSchema(...schema string...);
+...
+
+services.AddGraphQLClient<IGraphQLClient, GraphQLClient>(
+                httpClient, 
+                ...schema string...,
+                new [] { "...models namespace..." });
 ```
 
 Then you can make generic typed calls to the GraphQL backend.  The general format is
@@ -88,7 +92,7 @@ HttpClient = new HttpClient();
 HttpClient.BaseAddress = new Uri("https://graphschema.io/api/graphql");
 HttpClient.DefaultRequestHeaders.Add(HeaderNames.Authorization, "X-GraphSchemaIO-ApiKey ...your-key-id...:...your-key-secret...");
 
-GSioClient = new GraphSchemaIOClient(HttpClient);
+services.AddGraphSchemaIOLClient(HttpClient);
 ```
 
 ```
