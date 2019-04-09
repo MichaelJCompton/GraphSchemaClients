@@ -51,14 +51,14 @@ namespace GraphSchema.io.Client {
 
             for (int i = 1; i < 4; i++) {
                 Thread.Sleep(TimeSpan.FromSeconds(30 * i));
-                var getResult = await GetDgraphInstance(addResult.Value.DgraphId);
+                var getResult = await GetDgraphInstance(addResult.Value.Id);
                 if (getResult.IsSuccess && getResult.Value != null) {
                     return getResult;
                 }
             }
 
             var fail = Results.Fail<DgraphInstance>("Instance doesn't seem to be up yet");
-            fail.Value = addResult.Value;
+            fail.WithSuccess(new Success("Successesfully added instance").WithMetadata("Id", addResult.Value.Id));
             return fail;
         }
 
