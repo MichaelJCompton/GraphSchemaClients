@@ -1,11 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>GraphQL.Client</RootNamespace>
     <PackageId>GraphSchema.GraphQL.Client</PackageId>
     <LangVersion>latest</LangVersion>
-
     <Title>.Net GraphQL Client</Title>
     <Authors>Michael Compton</Authors>
     <Company>Michael Compton Pty Ltd</Company>
@@ -15,21 +13,16 @@
     <PackageProjectUrl>https://github.com/MichaelJCompton/GraphSchemaClients</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MichaelJCompton/GraphSchemaClients</RepositoryUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-
     <IncludeSymbols>true</IncludeSymbols>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
   </PropertyGroup>
-  
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-18618-05" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0"/>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1"/>
+    <PackageReference Include="System.ComponentModel.Annotations" Version="4.5.0"/>
+    <PackageReference Include="GraphQL" Version="2.4.0"/>
+    <PackageReference Include="FluentResults" Version="1.2.0"/>
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-    <PackageReference Include="System.ComponentModel.Annotations" Version="4.5.0" />
-    <PackageReference Include="GraphQL" Version="2.4.0" />
-    <PackageReference Include="FluentResults" Version="1.2.0" />
-  </ItemGroup>
-
 </Project>
