@@ -5,7 +5,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 Adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 0.1.0
+## 0.3.0
+
+### Changed
+
+- Changed DI to use IHttpClientFactory injection pattern
+- `AddGraphQLClient` and `AddGraphSchemaIOLClient` changed signature
+
+## 0.2.1
+
+### Added
+
+- DgraphInstance got an address of the instanace
+
+## 0.2.0
 
 ### Added
 

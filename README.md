@@ -41,15 +41,10 @@ public class PersonInput {
 Add the client into the dependency injection container with the same schema: e.g.
 
 ```
-var httpClient = new HttpClient();
-httpClient.BaseAddress = new System.Uri("http://something/graphql");
-
-...
-
 services.AddGraphQLClient<IGraphQLClient, GraphQLClient>(
-                httpClient, 
-                ...schema string...,
-                new [] { "...models namespace..." });
+    httpClient => httpClient.BaseAddress = new System.Uri("http://something/graphql"), 
+    ...schema string...,
+    new [] { "...models namespace..." });
 ```
 
 Then you can make generic typed calls to the GraphQL backend.  The general format is
@@ -85,15 +80,17 @@ Specialised version of GraphQL client for GraphSchema.io.
 
 GraphSchema.io is a service that can host [GraphSchema](https://github.com/MichaelJCompton/GraphSchemaTools) and [Dgraph](https://github.com/dgraph-io/dgraph) instances.  It's controled via a GraphQL api.  Once you have an account, you can automate deployment of Dgraph and GraphSchema infrastructure.
 
-Spin up a client for GraphSchema.io:
+Add a client for GraphSchema.io to the dependency injection container:
 
 ```
-HttpClient = new HttpClient();
-HttpClient.BaseAddress = new Uri("https://graphschema.io/api/graphql");
-HttpClient.DefaultRequestHeaders.Add(HeaderNames.Authorization, "X-GraphSchemaIO-ApiKey ...your-key-id...:...your-key-secret...");
-
-services.AddGraphSchemaIOLClient(HttpClient);
+services.AddGraphSchemaIOLClient(httpClient => {
+    httpClient.BaseAddress = new Uri("https://graphschema.io/api/graphql");
+    httpClient.DefaultRequestHeaders.Add(HeaderNames.Authorization, 
+        "X-GraphSchemaIO-ApiKey ...your-key-id...:...your-key-secret...");
+    });
 ```
+
+Then elsewhere you'd inject the `IGraphSchemaIOClient GSioClient`.  The:
 
 ```
 // Find the right environment

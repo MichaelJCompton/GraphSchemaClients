@@ -15,7 +15,7 @@ namespace Microsoft.Extensions.DependencyInjection {
 
         public static IServiceCollection AddGraphQLClient<TClientInterface, TClient>(
             this IServiceCollection services,
-            HttpClient httpClient,
+            Action<HttpClient> configureHttpClient,
             string schema,
             IEnumerable<string> modelNamespaces = null)
         where TClientInterface : class, IGraphQLClient where TClient : class, TClientInterface {
@@ -29,7 +29,7 @@ namespace Microsoft.Extensions.DependencyInjection {
             services.AddTransient<IRequestBuilder, RequestBuilder>();
             services.AddTransient<IResultBuilder, ResultBuilder>();
 
-            services.AddSingleton<IGraphQLRequestExecutor>(new HttpGraphQLRequestExecutor(httpClient, new ResultBuilder()));
+            services.AddHttpClient<IGraphQLRequestExecutor, HttpGraphQLRequestExecutor>(configureHttpClient);
 
             var schemaPrivider = new PartialSchemaProvider();
             schemaPrivider.WithSchema(schema);
