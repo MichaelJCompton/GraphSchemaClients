@@ -20,6 +20,32 @@ namespace Microsoft.Extensions.DependencyInjection {
             IEnumerable<string> modelNamespaces = null)
         where TClientInterface : class, IGraphQLClient where TClient : class, TClientInterface {
 
+            services.AddBaseGraphQLClientServices(schema, modelNamespaces);
+            services.AddHttpClient<IGraphQLRequestExecutor, HttpGraphQLRequestExecutor>(configureHttpClient);
+            services.AddTransient<TClientInterface, TClient>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddGraphQLClient<TClientInterface, TClient>(
+            this IServiceCollection services,
+            Action<IServiceProvider, HttpClient> configureHttpClient,
+            string schema,
+            IEnumerable<string> modelNamespaces = null)
+        where TClientInterface : class, IGraphQLClient where TClient : class, TClientInterface {
+
+            services.AddBaseGraphQLClientServices(schema, modelNamespaces);
+            services.AddHttpClient<IGraphQLRequestExecutor, HttpGraphQLRequestExecutor>(configureHttpClient);
+            services.AddTransient<TClientInterface, TClient>();
+
+            return services;
+        }
+
+        private static IServiceCollection AddBaseGraphQLClientServices(
+            this IServiceCollection services,
+            string schema,
+            IEnumerable<string> modelNamespaces = null) {
+
             services.AddTransient<IFieldValidator, FieldValidator>();
             services.AddTransient<ISchemaValidator, SchemaValidator>();
 
@@ -29,13 +55,9 @@ namespace Microsoft.Extensions.DependencyInjection {
             services.AddTransient<IRequestBuilder, RequestBuilder>();
             services.AddTransient<IResultBuilder, ResultBuilder>();
 
-            services.AddHttpClient<IGraphQLRequestExecutor, HttpGraphQLRequestExecutor>(configureHttpClient);
-
             var schemaPrivider = new PartialSchemaProvider();
             schemaPrivider.WithSchema(schema);
             services.AddSingleton<IPartialSchemaProvider>(schemaPrivider);
-
-            services.AddTransient<TClientInterface, TClient>();
 
             return services;
         }
